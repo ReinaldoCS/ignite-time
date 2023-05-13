@@ -20,7 +20,7 @@ const newCycleFormValidationSchema = z.object({
   task: z.string().min(1, 'Informe a tarefa'),
   minutesAmount: z
     .number()
-    .min(5, 'O ciclo precisa ser de mínimo 5 minutos')
+    .min(1, 'O ciclo precisa ser de mínimo 5 minutos')
     .max(60, 'O ciclo precisa ser de máximo 60 minutos'),
 })
 
@@ -32,12 +32,33 @@ interface Cycle {
   minutesAmount: number
   startDate: Date
   interruptedDate?: Date
+  finishedDate?: Date
 }
 
 export function Home() {
+  // Armazena todos os ciclos
   const [cycles, setCycles] = useState<Cycle[]>([])
+
+  // Armazena o clico atual que esta sendo executado
   const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
+
+  // Armazena quando segundos se passaram desde o inicio do ciclo atual
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+
+  // Verifica e retorna todos os valores do ciclo ativo
+  const activeCycle = cycles.find((cycles) => cycles.id === activeCycleId)
+
+  // Verifica e retorna em o total se segundos dentro do ciclo ativo
+  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
+
+  // Realiza a soma de total de segundos do clico se subtrai pelos segundos passados
+  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
+
+  const minutesAmount = Math.floor(currentSeconds / 60)
+  const secondsAmount = currentSeconds % 60
+
+  const minutes = String(minutesAmount).padStart(2, '0')
+  const seconds = String(secondsAmount).padStart(2, '0')
 
   const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
     resolver: zodResolver(newCycleFormValidationSchema),
@@ -65,27 +86,9 @@ export function Home() {
     reset()
   }
 
-  const activeCycle = cycles.find((cycles) => cycles.id === activeCycleId)
-
-  useEffect(() => {
-    let interval: ReturnType<typeof setInterval>
-    if (activeCycle) {
-      interval = setInterval(() => {
-        setAmountSecondsPassed(
-          differenceInSeconds(new Date(), activeCycle.startDate),
-        )
-      }, 1000)
-    }
-
-    // Função para 'resetar' o que estava sendo executado no userEffect anterior
-    return () => {
-      clearInterval(interval)
-    }
-  }, [activeCycle])
-
   function handleInterruptCycle() {
-    setCycles(
-      cycles.map((cycle) => {
+    setCycles((state) =>
+      state.map((cycle) => {
         if (cycle.id === activeCycleId) {
           return { ...cycle, interruptedDate: new Date() }
         } else {
@@ -97,15 +100,46 @@ export function Home() {
     setActiveCycleId(null)
   }
 
-  const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
-  const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
+  // Realiza a logica do countdown
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>
 
-  const minutesAmount = Math.floor(currentSeconds / 60)
-  const secondsAmount = currentSeconds % 60
+    if (activeCycle) {
+      interval = setInterval(() => {
+        const secondsDifference = differenceInSeconds(
+          new Date(),
+          activeCycle.startDate,
+        )
 
-  const minutes = String(minutesAmount).padStart(2, '0')
-  const seconds = String(secondsAmount).padStart(2, '0')
+        console.log(secondsDifference)
 
+        if (secondsDifference >= totalSeconds) {
+          setCycles((state) =>
+            state.map((cycle) => {
+              if (cycle.id === activeCycleId) {
+                return { ...cycle, finishedDate: new Date() }
+              } else {
+                return cycle
+              }
+            }),
+          )
+
+          setActiveCycleId(null)
+          clearInterval(interval)
+          setAmountSecondsPassed(totalSeconds)
+        } else {
+          setAmountSecondsPassed(secondsDifference)
+        }
+      }, 1000)
+    }
+
+    // Função para 'resetar' o que estava sendo executado no userEffect anterior
+    return () => {
+      clearInterval(interval)
+    }
+  }, [activeCycle, totalSeconds, activeCycleId])
+
+  // Atualiza o titulo da página de acordo com countdown
   useEffect(() => {
     if (activeCycle) {
       document.title = `${minutes}:${seconds}`
@@ -141,7 +175,7 @@ export function Home() {
             type="number"
             placeholder="00"
             step={5}
-            min={5}
+            min={1}
             max={60}
             disabled={!!activeCycle}
             {...register('minutesAmount', { valueAsNumber: true })}
