@@ -1,14 +1,18 @@
-import { useContext, useEffect, useState } from 'react'
+import { useContext, useEffect } from 'react'
 import { CountdownContainer, Separator } from './styles'
 import { differenceInSeconds } from 'date-fns'
 import { CycleContext } from '../..'
 
 export function Countdown() {
-  const { activeCycle, activeCycleId, markCurrentCycleAsFinished } =
-    useContext(CycleContext)
+  const {
+    activeCycle,
+    activeCycleId,
+    markCurrentCycleAsFinished,
+    amountSecondsPassed,
+    setSecondPassed,
+    setActiveCycleIdNull,
+  } = useContext(CycleContext)
 
-  // Armazena quando segundos se passaram desde o inicio do ciclo atual
-  const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
   // Verifica e retorna em o total se segundos dentro do ciclo ativo
   const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
   // Realiza a soma de total de segundos do clico se subtrai pelos segundos passados
@@ -36,11 +40,11 @@ export function Countdown() {
         if (secondsDifference >= totalSeconds) {
           markCurrentCycleAsFinished()
 
-          // setActiveCycleId(null)
+          setActiveCycleIdNull()
           clearInterval(interval)
-          setAmountSecondsPassed(totalSeconds)
+          setSecondPassed(totalSeconds)
         } else {
-          setAmountSecondsPassed(secondsDifference)
+          setSecondPassed(secondsDifference)
         }
       }, 1000)
     }
@@ -49,7 +53,14 @@ export function Countdown() {
     return () => {
       clearInterval(interval)
     }
-  }, [activeCycle, totalSeconds, activeCycleId, markCurrentCycleAsFinished])
+  }, [
+    activeCycle,
+    totalSeconds,
+    activeCycleId,
+    markCurrentCycleAsFinished,
+    setSecondPassed,
+    setActiveCycleIdNull,
+  ])
 
   // Atualiza o titulo da página de acordo com countdown
   useEffect(() => {
