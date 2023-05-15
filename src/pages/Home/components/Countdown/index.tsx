@@ -60,7 +60,7 @@ export function Countdown() {
   useEffect(() => {
     if (activeCycle) {
       document.title = `${minutes}:${seconds}`
-    } else document.title = 'Ignite Timerc'
+    } else document.title = 'Ignite Timer'
   }, [minutes, seconds, activeCycle])
   return (
     <CountdownContainer>
