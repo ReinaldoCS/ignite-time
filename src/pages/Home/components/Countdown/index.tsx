@@ -10,7 +10,6 @@ export function Countdown() {
     markCurrentCycleAsFinished,
     amountSecondsPassed,
     setSecondPassed,
-    setActiveCycleIdNull,
   } = useContext(CycleContext)
 
   // Verifica e retorna em o total se segundos dentro do ciclo ativo
@@ -37,8 +36,6 @@ export function Countdown() {
 
         if (secondsDifference >= totalSeconds) {
           markCurrentCycleAsFinished()
-
-          setActiveCycleIdNull()
           clearInterval(interval)
           setSecondPassed(totalSeconds)
         } else {
@@ -57,7 +54,6 @@ export function Countdown() {
     activeCycleId,
     markCurrentCycleAsFinished,
     setSecondPassed,
-    setActiveCycleIdNull,
   ])
 
   // Atualiza o titulo da página de acordo com countdown
