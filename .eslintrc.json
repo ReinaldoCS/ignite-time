@@ -1,3 +1,8 @@
 {
-  "extends": "@rocketseat/eslint-config/react"
+  "extends": [
+    "@rocketseat/eslint-config/react",
+    "eslint:recommend",
+    "plugin:@typescript-eslint/eslint-recommend",
+    "plugin:@typescript-eslint/recommend"
+  ]
 }
