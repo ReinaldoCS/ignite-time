@@ -1,10 +1,17 @@
-import { ReactNode, createContext, useReducer, useState } from 'react'
+import {
+  ReactNode,
+  createContext,
+  useEffect,
+  useReducer,
+  useState,
+} from 'react'
 import { Cycle, cyclesReducer } from '../reducers/cycles/reducer'
 import {
   addNewCycleAction,
   interruptedCurrentCycleAction,
   markCurrentCycleAsFinishedAction,
 } from '../reducers/cycles/actions'
+import { differenceInSeconds } from 'date-fns'
 
 interface CreateCycleData {
   task: string
@@ -28,18 +35,37 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
   // Armazena todos os ciclos
   // const [cycles, setCycles] = useState<Cycle[]>([])
 
-  const [cyclesState, dispatch] = useReducer(cyclesReducer, {
-    cycles: [],
-    activeCycleId: null,
-  })
+  const [cyclesState, dispatch] = useReducer(
+    cyclesReducer,
+    {
+      cycles: [],
+      activeCycleId: null,
+    },
+    (initialState) => {
+      const storedStateAsJSON = localStorage.getItem(
+        '@ignite-timer:cycles-state-v1.0.0',
+      )
 
-  // Armazena quando segundos se passaram desde o inicio do ciclo atual
-  const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+      if (storedStateAsJSON) {
+        return JSON.parse(storedStateAsJSON)
+      }
+
+      return initialState
+    },
+  )
 
   const { cycles, activeCycleId } = cyclesState
-
   // Verifica e retorna todos os valores do ciclo ativo
   const activeCycle = cycles.find((cycles) => cycles.id === activeCycleId)
+
+  // Armazena quando segundos se passaram desde o inicio do ciclo atual
+  const [amountSecondsPassed, setAmountSecondsPassed] = useState(() => {
+    if (activeCycle) {
+      return differenceInSeconds(new Date(), new Date(activeCycle.startDate))
+    }
+
+    return 0
+  })
 
   function markCurrentCycleAsFinished() {
     dispatch(markCurrentCycleAsFinishedAction())
@@ -67,6 +93,12 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
   function interruptCycle() {
     dispatch(interruptedCurrentCycleAction())
   }
+
+  useEffect(() => {
+    const stateJSON = JSON.stringify(cyclesState)
+
+    localStorage.setItem('@ignite-timer:cycles-state-v1.0.0', stateJSON)
+  }, [cyclesState])
 
   return (
     <CycleContext.Provider
