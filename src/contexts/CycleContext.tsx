@@ -21,9 +21,13 @@ interface CycleContextType {
   amountSecondsPassed: number
   markCurrentCycleAsFinished: () => void
   setSecondPassed: (seconds: number) => void
-  setActiveCycleIdNull: () => void
   createNewCycle: (data: CreateCycleData) => void
   interruptCycle: () => void
+}
+
+interface CyclesState {
+  cycles: Cycle[]
+  activeCycleId: string | null
 }
 
 export const CycleContext = createContext({} as CycleContextType)
@@ -32,19 +36,44 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
   // Armazena todos os ciclos
   // const [cycles, setCycles] = useState<Cycle[]>([])
 
-  const [cycles, dispatch] = useReducer((state: Cycle[], action: any) => {
-    if (action.type === 'ADD_NEW_CYCLE') {
-      return [...state, action.payload.newCycle]
-    }
-    return state
-  }, [])
+  const [cyclesState, dispatch] = useReducer(
+    (state: CyclesState, action: any) => {
+      if (action.type === 'ADD_NEW_CYCLE') {
+        return {
+          ...state,
+          cycles: [...state.cycles, action.payload.newCycle],
+          activeCycleId: action.payload.newCycle.id,
+        }
+      }
 
-  // Armazena o clico atual que esta sendo executado
-  const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
-  // Verifica e retorna todos os valores do ciclo ativo
-  const activeCycle = cycles.find((cycles) => cycles.id === activeCycleId)
+      if (action.type === 'INTERRUPT_CURRENT_CYCLE') {
+        return {
+          ...state,
+          cycles: state.cycles.map((cycle) => {
+            if (cycle.id === state.activeCycleId) {
+              return { ...cycle, interruptedDate: new Date() }
+            } else {
+              return cycle
+            }
+          }),
+          activeCycleId: null,
+        }
+      }
+      return state
+    },
+    {
+      cycles: [],
+      activeCycleId: null,
+    },
+  )
+
   // Armazena quando segundos se passaram desde o inicio do ciclo atual
   const [amountSecondsPassed, setAmountSecondsPassed] = useState(0)
+
+  const { cycles, activeCycleId } = cyclesState
+
+  // Verifica e retorna todos os valores do ciclo ativo
+  const activeCycle = cycles.find((cycles) => cycles.id === activeCycleId)
 
   function markCurrentCycleAsFinished() {
     dispatch({
@@ -67,10 +96,6 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
     setAmountSecondsPassed(seconds)
   }
 
-  function setActiveCycleIdNull() {
-    setActiveCycleId(null)
-  }
-
   function createNewCycle(data: CreateCycleData) {
     const id = String(new Date().getTime())
 
@@ -85,9 +110,7 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
       type: 'ADD_NEW_CYCLE',
       payload: { newCycle },
     })
-    // pega o valor anterior na variável 'state'
-    // setCycles((state) => [...state, newCycle])
-    setActiveCycleId(id)
+
     setAmountSecondsPassed(0)
   }
 
@@ -96,18 +119,6 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
       type: 'INTERRUPT_CURRENT_CYCLE',
       payload: { activeCycleId },
     })
-
-    // setCycles((state) =>
-    //   state.map((cycle) => {
-    //     if (cycle.id === activeCycleId) {
-    //       return { ...cycle, interruptedDate: new Date() }
-    //     } else {
-    //       return cycle
-    //     }
-    //   }),
-    // )
-
-    setActiveCycleId(null)
   }
 
   return (
@@ -119,7 +130,6 @@ export function CycleContextProvider({ children }: { children: ReactNode }) {
         markCurrentCycleAsFinished,
         amountSecondsPassed,
         setSecondPassed,
-        setActiveCycleIdNull,
         createNewCycle,
         interruptCycle,
       }}
